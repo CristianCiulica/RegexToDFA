@@ -12,7 +12,7 @@ public:
     std::set<int> F;
     DeterministicFiniteAutomaton();
 
-    bool VerifyAutomaton();
-    void PrintAutomaton();
-    bool CheckWord(std::string word);
+    bool VerificaAutomat();
+    void AfiseazaAutomat();
+    bool VerificaCuvant(std::string cuvant);
 };
