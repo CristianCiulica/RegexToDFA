@@ -2,6 +2,7 @@
 #include <set>
 #include <map>
 #include <string>
+#include <vector>
 
 class DeterministicFiniteAutomaton {
 public:
@@ -10,6 +11,7 @@ public:
     std::map<std::pair<int, char>, int> delta;
     int q0;
     std::set<int> F;
+
     DeterministicFiniteAutomaton();
 
     bool VerificaAutomat();

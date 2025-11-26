@@ -1,0 +1,48 @@
+Expresie regulata: (a|b)(c|d)+ef(g|h)*ij(k|l)+mn(o|p)*
+Forma postfixata: ab|cd|+.e.f.gh|*.i.j.kl|+.m.n.op|*.
+
+--- AUTOMAT FINIT DETERMINIST ---
+Stari (Q): { q0 q1 q2 q3 q4 q5 q6 q7 q8 q9 q10 q11 q12 q13 q14 q15 q16 }
+Alfabet (Sigma): { a b c d e f g h i j k l m n o p }
+Stare initiala: q0
+Stari finale (F): { q14 q15 q16 }
+
+Tranzitii:
+  delta(q0, a) = q1
+  delta(q0, b) = q2
+  delta(q1, c) = q3
+  delta(q1, d) = q4
+  delta(q2, c) = q3
+  delta(q2, d) = q4
+  delta(q3, c) = q3
+  delta(q3, d) = q4
+  delta(q3, e) = q5
+  delta(q4, c) = q3
+  delta(q4, d) = q4
+  delta(q4, e) = q5
+  delta(q5, f) = q6
+  delta(q6, g) = q7
+  delta(q6, h) = q8
+  delta(q6, i) = q9
+  delta(q7, g) = q7
+  delta(q7, h) = q8
+  delta(q7, i) = q9
+  delta(q8, g) = q7
+  delta(q8, h) = q8
+  delta(q8, i) = q9
+  delta(q9, j) = q10
+  delta(q10, k) = q11
+  delta(q10, l) = q12
+  delta(q11, k) = q11
+  delta(q11, l) = q12
+  delta(q11, m) = q13
+  delta(q12, k) = q11
+  delta(q12, l) = q12
+  delta(q12, m) = q13
+  delta(q13, n) = q14
+  delta(q14, o) = q15
+  delta(q14, p) = q16
+  delta(q15, o) = q15
+  delta(q15, p) = q16
+  delta(q16, o) = q15
+  delta(q16, p) = q16
