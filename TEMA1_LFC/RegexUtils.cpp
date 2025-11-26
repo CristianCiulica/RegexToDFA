@@ -4,6 +4,8 @@
 #include <set>
 #include <map>
 #include <stack>
+#include <algorithm>
+#include <string>
 
 struct NFA {
     std::set<int> states;
@@ -17,27 +19,32 @@ struct NFA {
 };
 
 bool isOperator(char c) {
-    return (c == '|' || c == '.' || c == '*' || c == '(' || c == ')');
+    return (c == '|' || c == '.' || c == '*' || c == '+' || c == '(' || c == ')');
 }
 
 int priority(char op) {
     if (op == '|') return 1;
     if (op == '.') return 2;
-    if (op == '*') return 3;
+    if (op == '*' || op == '+') return 3;
     return 0;
 }
 
 std::string addConcatenation(std::string regex) {
     std::string result = "";
     for (int i = 0; i < regex.length(); i++) {
-        result += regex[i];
+        char c1 = regex[i];
+        result += c1;
 
         if (i + 1 < regex.length()) {
-            char current = regex[i];
-            char next = regex[i + 1];
+            char c2 = regex[i + 1];
 
-            if ((current != '(' && current != '|') &&
-                (next != ')' && next != '|' && next != '*')) {
+            bool c1_is_operand = !isOperator(c1);
+            bool c2_is_operand = !isOperator(c2);
+
+            bool c1_allows_dot_after = (c1_is_operand || c1 == '*' || c1 == '+' || c1 == ')');
+            bool c2_allows_dot_before = (c2_is_operand || c2 == '(');
+
+            if (c1_allows_dot_after && c2_allows_dot_before) {
                 result += '.';
             }
         }
@@ -47,13 +54,10 @@ std::string addConcatenation(std::string regex) {
 
 std::string regexToPostfix(std::string regex) {
     regex = addConcatenation(regex);
-
     std::string postfix = "";
     std::stack<char> stack;
 
-    for (int i = 0; i < regex.length(); i++) {
-        char c = regex[i];
-
+    for (char c : regex) {
         if (!isOperator(c)) {
             postfix += c;
         }
@@ -68,76 +72,56 @@ std::string regexToPostfix(std::string regex) {
             if (!stack.empty()) stack.pop();
         }
         else {
-            while (!stack.empty() && stack.top() != '(' &&
-                priority(stack.top()) >= priority(c)) {
+            while (!stack.empty() && stack.top() != '('
+                && priority(stack.top()) >= priority(c)) {
                 postfix += stack.top();
                 stack.pop();
             }
             stack.push(c);
         }
     }
-
     while (!stack.empty()) {
         postfix += stack.top();
         stack.pop();
     }
-
     return postfix;
 }
 
-std::set<int> lambdaClosure(std::set<int> states, std::map<int, std::set<int> >& lambda_trans) {
+std::set<int> lambdaClosure(std::set<int> states, std::map<int, std::set<int>>& lambda_trans) {
     std::set<int> result = states;
     std::stack<int> to_process;
-    for (std::set<int>::iterator it = states.begin(); it != states.end(); ++it) {
-        to_process.push(*it);
-    }
+    for (int s : states) to_process.push(s);
+
     while (!to_process.empty()) {
         int state = to_process.top();
         to_process.pop();
 
-        if (lambda_trans.find(state) != lambda_trans.end()) {
-            std::set<int>& next = lambda_trans[state];
-            for (std::set<int>::iterator it = next.begin(); it != next.end(); ++it) {
-                if (result.find(*it) == result.end()) {
-                    result.insert(*it);
-                    to_process.push(*it);
+        if (lambda_trans.count(state)) {
+            for (int next_state : lambda_trans[state]) {
+                if (result.find(next_state) == result.end()) {
+                    result.insert(next_state);
+                    to_process.push(next_state);
                 }
             }
         }
     }
-
     return result;
 }
 
-
 DeterministicFiniteAutomaton RegexToDFA(std::string regex) {
-    std::cout << "\n=== STEP 1: Convert to postfix notation ===" << std::endl;
     std::string postfix = regexToPostfix(regex);
-    std::cout << "Original expression: " << regex << std::endl;
-    std::cout << "Postfix form: " << postfix << std::endl;
-
-    std::cout << "\n=== STEP 2: Build NFA with lambda transitions ===" << std::endl;
-
     std::stack<NFA> nfa_stack;
     int state_counter = 0;
 
-    for (int idx = 0; idx < postfix.length(); idx++) {
-        char c = postfix[idx];
-
+    for (char c : postfix) {
         if (!isOperator(c)) {
-            NFA new_nfa;
-            new_nfa.initial_state = state_counter++;
-            new_nfa.final_state = state_counter++;
-            new_nfa.states.insert(new_nfa.initial_state);
-            new_nfa.states.insert(new_nfa.final_state);
-            new_nfa.alphabet.insert(c);
-
-            std::pair<int, char> key(new_nfa.initial_state, c);
-            new_nfa.transitions[key].insert(new_nfa.final_state);
-
-            nfa_stack.push(new_nfa);
-            std::cout << "  Character '" << c << "': q" << new_nfa.initial_state
-                << " -> q" << new_nfa.final_state << std::endl;
+            NFA nfa;
+            nfa.initial_state = state_counter++;
+            nfa.final_state = state_counter++;
+            nfa.states = { nfa.initial_state, nfa.final_state };
+            nfa.alphabet.insert(c);
+            nfa.transitions[{nfa.initial_state, c}].insert(nfa.final_state);
+            nfa_stack.push(nfa);
         }
         else if (c == '.') {
             NFA B = nfa_stack.top(); nfa_stack.pop();
@@ -149,140 +133,191 @@ DeterministicFiniteAutomaton RegexToDFA(std::string regex) {
 
             C.states = A.states;
             C.states.insert(B.states.begin(), B.states.end());
-
             C.alphabet = A.alphabet;
             C.alphabet.insert(B.alphabet.begin(), B.alphabet.end());
 
             C.transitions = A.transitions;
             C.transitions.insert(B.transitions.begin(), B.transitions.end());
-
             C.lambda_transitions = A.lambda_transitions;
             C.lambda_transitions.insert(B.lambda_transitions.begin(), B.lambda_transitions.end());
 
             C.lambda_transitions[A.final_state].insert(B.initial_state);
-
             nfa_stack.push(C);
-            std::cout << "  Concatenation: q" << C.initial_state << " -> q" << C.final_state << std::endl;
         }
         else if (c == '|') {
             NFA B = nfa_stack.top(); nfa_stack.pop();
             NFA A = nfa_stack.top(); nfa_stack.pop();
-
             NFA C;
             C.initial_state = state_counter++;
             C.final_state = state_counter++;
 
+            C.states = A.states;
+            C.states.insert(B.states.begin(), B.states.end());
             C.states.insert(C.initial_state);
             C.states.insert(C.final_state);
-            C.states.insert(A.states.begin(), A.states.end());
-            C.states.insert(B.states.begin(), B.states.end());
-
             C.alphabet = A.alphabet;
             C.alphabet.insert(B.alphabet.begin(), B.alphabet.end());
 
             C.transitions = A.transitions;
             C.transitions.insert(B.transitions.begin(), B.transitions.end());
-
             C.lambda_transitions = A.lambda_transitions;
             C.lambda_transitions.insert(B.lambda_transitions.begin(), B.lambda_transitions.end());
 
             C.lambda_transitions[C.initial_state].insert(A.initial_state);
             C.lambda_transitions[C.initial_state].insert(B.initial_state);
-
             C.lambda_transitions[A.final_state].insert(C.final_state);
             C.lambda_transitions[B.final_state].insert(C.final_state);
 
             nfa_stack.push(C);
-            std::cout << "  Alternation: q" << C.initial_state << " -> q" << C.final_state << std::endl;
         }
-        else if (c == '*') {
+        else if (c == '*' || c == '+') {
             NFA A = nfa_stack.top(); nfa_stack.pop();
-
             NFA C;
             C.initial_state = state_counter++;
             C.final_state = state_counter++;
 
+            C.states = A.states;
             C.states.insert(C.initial_state);
             C.states.insert(C.final_state);
-            C.states.insert(A.states.begin(), A.states.end());
-
             C.alphabet = A.alphabet;
             C.transitions = A.transitions;
             C.lambda_transitions = A.lambda_transitions;
 
             C.lambda_transitions[C.initial_state].insert(A.initial_state);
             C.lambda_transitions[A.final_state].insert(C.final_state);
-            C.lambda_transitions[C.initial_state].insert(C.final_state);
             C.lambda_transitions[A.final_state].insert(A.initial_state);
 
+            if (c == '*') {
+                C.lambda_transitions[C.initial_state].insert(C.final_state);
+            }
+
             nfa_stack.push(C);
-            std::cout << "  Kleene star: q" << C.initial_state << " -> q" << C.final_state << std::endl;
         }
     }
 
     NFA final_nfa = nfa_stack.top();
 
-    std::cout << "\n=== STEP 3: Convert NFA to DFA ===" << std::endl;
-
     DeterministicFiniteAutomaton dfa;
+    int dfa_state_counter = 0;
 
-    std::map<std::set<int>, int> set_to_state;
-    std::map<int, std::set<int> > state_to_set;
-    int dfa_counter = 0;
+    std::map<std::set<int>, int> set_to_id;
+    std::vector<std::set<int>> process_queue;
 
-    std::set<int> init_set;
-    init_set.insert(final_nfa.initial_state);
-    std::set<int> init_closure = lambdaClosure(init_set, final_nfa.lambda_transitions);
+    std::set<int> start_closure = lambdaClosure({ final_nfa.initial_state }, final_nfa.lambda_transitions);
 
-    dfa.q0 = dfa_counter++;
-    set_to_state[init_closure] = dfa.q0;
-    state_to_set[dfa.q0] = init_closure;
+    dfa.q0 = dfa_state_counter;
+    set_to_id[start_closure] = dfa_state_counter++;
     dfa.Q.insert(dfa.q0);
-
-    std::vector<std::set<int> > to_process;
-    to_process.push_back(init_closure);
+    process_queue.push_back(start_closure);
 
     dfa.Sigma = final_nfa.alphabet;
 
-    int process_index = 0;
-    while (process_index < to_process.size()) {
-        std::set<int> current_states = to_process[process_index++]; 
+    int idx = 0;
+    while (idx < process_queue.size()) {
+        std::set<int> current_set = process_queue[idx++];
+        int current_id = set_to_id[current_set];
 
-        for (std::set<char>::iterator ch = dfa.Sigma.begin(); ch != dfa.Sigma.end(); ++ch) {
-            char symbol = *ch;
-            std::set<int> next;
-
-            for (std::set<int>::iterator st = current_states.begin(); st != current_states.end(); ++st) {
-                std::pair<int, char> key(*st, symbol);
-                if (final_nfa.transitions.find(key) != final_nfa.transitions.end()) {
-                    std::set<int>& destinations = final_nfa.transitions.at(key);
-                    next.insert(destinations.begin(), destinations.end());
-                }
-            }
-
-            if (!next.empty()) {
-                next = lambdaClosure(next, final_nfa.lambda_transitions);
-
-                if (set_to_state.find(next) == set_to_state.end()) {
-                    int new_state = dfa_counter++;
-                    set_to_state[next] = new_state;
-                    state_to_set[new_state] = next;
-                    dfa.Q.insert(new_state);
-                    to_process.push_back(next);
-                }
-
-                std::pair<int, char> dfa_key(set_to_state[current_states], symbol);
-                dfa.delta[dfa_key] = set_to_state[next];
-            }
+        if (current_set.count(final_nfa.final_state)) {
+            dfa.F.insert(current_id);
         }
-    }
 
-    for (std::map<int, std::set<int> >::iterator it = state_to_set.begin();
-        it != state_to_set.end(); ++it) {
-        if (it->second.find(final_nfa.final_state) != it->second.end()) {
-            dfa.F.insert(it->first);
+        for (char symbol : dfa.Sigma) {
+            std::set<int> next_set;
+            for (int s : current_set) {
+                if (final_nfa.transitions.count({ s, symbol })) {
+                    for (int dest : final_nfa.transitions[{s, symbol}]) {
+                        next_set.insert(dest);
+                    }
+                }
+            }
+
+            if (!next_set.empty()) {
+                std::set<int> closure = lambdaClosure(next_set, final_nfa.lambda_transitions);
+
+                if (set_to_id.find(closure) == set_to_id.end()) {
+                    set_to_id[closure] = dfa_state_counter;
+                    dfa.Q.insert(dfa_state_counter);
+                    process_queue.push_back(closure);
+                    dfa_state_counter++;
+                }
+
+                dfa.delta[{current_id, symbol}] = set_to_id[closure];
+            }
         }
     }
 
     return dfa;
+}
+
+SyntaxNode* buildSyntaxTree(std::string postfix) {
+    std::stack<SyntaxNode*> st;
+
+    for (char c : postfix) {
+        if (!isOperator(c)) {
+            st.push(new SyntaxNode(std::string(1, c)));
+        }
+        else {
+            std::string displayValue = std::string(1, c);
+            if (c == '|') displayValue = "(sau)";
+            if (c == '.') displayValue = "(.)"; 
+            if (c == '*') displayValue = "(*)"; 
+            if (c == '+') displayValue = "(+)";    
+
+            SyntaxNode* node = new SyntaxNode(displayValue);
+
+            if (c == '*' || c == '+') {
+                if (!st.empty()) {
+                    node->left = st.top();
+                    st.pop();
+                }
+            }
+            else {
+                if (!st.empty()) {
+                    node->right = st.top();
+                    st.pop();
+                }
+                if (!st.empty()) {
+                    node->left = st.top();
+                    st.pop();
+                }
+            }
+            st.push(node);
+        }
+    }
+    return st.empty() ? nullptr : st.top();
+}
+
+void printTreeRecursive(SyntaxNode* node, std::string prefix, bool isLast) {
+    if (!node) return;
+
+    std::cout << prefix;
+    std::cout << (isLast ? "`-- " : "|-- ");
+    std::cout << node->value << std::endl;
+
+    std::string childPrefix = prefix + (isLast ? "    " : "|   ");
+
+    if (node->left && node->right) {
+        printTreeRecursive(node->left, childPrefix, false);
+        printTreeRecursive(node->right, childPrefix, true);
+    }
+    else if (node->left) {
+        printTreeRecursive(node->left, childPrefix, true);
+    }
+    else if (node->right) {
+        printTreeRecursive(node->right, childPrefix, true);
+    }
+}
+
+void printSyntaxTree(SyntaxNode* root) {
+    if (!root) return;
+    std::cout << "\nArbore Sintactic (Structura):\n";
+    printTreeRecursive(root, "", true);
+    std::cout << std::endl;
+}
+
+void deleteTree(SyntaxNode* root) {
+    if (!root) return;
+    deleteTree(root->left);
+    deleteTree(root->right);
+    delete root;
 }
