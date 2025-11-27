@@ -11,20 +11,36 @@ int main() {
 
     std::string regex;
     std::ifstream fin("input.txt");
+    bool needConsoleInput = true;
     if (fin.is_open()) {
-        std::getline(fin, regex);
-        std::cout << BLUE << "[INFO] " << RESET << "S-a citit din input.txt expresia: " << BOLD << regex << RESET << std::endl;
+        if (fin.peek() == EOF) {
+            std::cout << YELLOW << "[ATENTIE] " << RESET << "Fisierul input.txt exista, dar este " << RED << "GOL" << RESET << "." << std::endl;
+        }
+        else {
+            std::getline(fin, regex);
+            if (regex.empty()) {
+                std::cout << YELLOW << "[ATENTIE] " << RESET << "Expresia citita din fisier este " << RED << "VIDA" << RESET << "." << std::endl;
+            }
+            else {
+                std::cout << BLUE << "[INFO] " << RESET << "S-a citit din input.txt expresia: " << BOLD << regex << RESET << std::endl;
+                needConsoleInput = false;
+            }
+        }
         fin.close();
     }
     else {
-        std::cout << YELLOW << "[INPUT] " << RESET << "Nu s-a gasit input.txt. Introduceti regex: ";
+        std::cout << YELLOW << "[INFO] " << RESET << "Nu s-a gasit fisierul input.txt." << std::endl;
+    }
+
+    if (needConsoleInput) {
+        std::cout << YELLOW << "[INPUT] " << RESET << "Introduceti regex manual: ";
         std::cout << YELLOW;
         std::getline(std::cin, regex);
         std::cout << RESET;
     }
 
     if (regex.empty()) {
-        std::cout << RED << "[EROARE] Expresie vida!" << RESET << std::endl;
+        std::cout << RED << "[EROARE] Expresie vida." << RESET << std::endl;
         return 1;
     }
     DeterministicFiniteAutomaton dfa = RegexToDFA(regex);
@@ -93,7 +109,7 @@ int main() {
                 std::cout << "\n" << GREEN << "[SUCCES] Automatul a fost salvat in output.txt" << RESET << std::endl;
             }
             else {
-                std::cout << "\n" << RED << "[EROARE] Nu s-a putut crea fisierul!" << RESET << std::endl;
+                std::cout << "\n" << RED << "[EROARE] Nu s-a putut crea fisierul" << RESET << std::endl;
             }
             break;
         }
@@ -107,18 +123,19 @@ int main() {
 
                 if (word == "stop") {
                     std::cout << MAGENTA << "Revenire la meniu..." << RESET << std::endl;
-                    break; 
+                    break;
                 }
 
                 if (word == "_")
                     word = "";
+
                 dfa.VerificaCuvant(word);
                 std::cout << std::endl;
             }
             break;
         }
         case 0:
-            std::cout << MAGENTA << "La revedere!" << RESET << std::endl;
+            std::cout << MAGENTA << "Program incheiat." << RESET << std::endl;
             break;
         default:
             std::cout << RED << "Optiune invalida." << RESET << std::endl;
