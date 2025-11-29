@@ -1,5 +1,5 @@
-Expresie regulata: abc*def+
-Forma postfixata: ab.c*.d.e.f+.
+Expresie regulata: abc*d?ef+
+Forma postfixata: ab.c*.d?.e.f+.
 
 --- AUTOMAT FINIT DETERMINIST ---
 Stari (Q): { q0 q1 q2 q3 q4 q5 q6 }
@@ -12,8 +12,10 @@ Tranzitii:
   delta(q1, b) = q2
   delta(q2, c) = q3
   delta(q2, d) = q4
+  delta(q2, e) = q5
   delta(q3, c) = q3
   delta(q3, d) = q4
+  delta(q3, e) = q5
   delta(q4, e) = q5
   delta(q5, f) = q6
   delta(q6, f) = q6
