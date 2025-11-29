@@ -49,9 +49,9 @@ int main() {
 
     int option;
     do {
-        std::cout << "\n" << BLUE << "----------------------------------------" << RESET << std::endl;
-        std::cout << "          " << CYAN << "MENIU PRINCIPAL" << RESET << std::endl;
-        std::cout << BLUE << "----------------------------------------" << RESET << std::endl;
+        std::cout << "\n" << BLUE << "--------------------------------" << RESET << std::endl;
+        std::cout << "          " << CYAN << "MENIU " << RESET << std::endl;
+        std::cout << BLUE << "--------------------------------" << RESET << std::endl;
 
         std::cout << "1. Afiseaza notatia postfixata" << std::endl;
         std::cout << "2. Afiseaza Arborele Sintactic" << std::endl;
@@ -60,7 +60,7 @@ int main() {
         std::cout << "5. Verifica cuvinte" << std::endl;
         std::cout << "0. Iesire" << std::endl;
 
-        std::cout << BLUE << "----------------------------------------" << RESET << std::endl;
+        std::cout << BLUE << "--------------------------------" << RESET << std::endl;
         std::cout << YELLOW << "Optiune: " << RESET;
 
         while (!(std::cin >> option)) {
@@ -135,7 +135,7 @@ int main() {
             break;
         }
         case 0:
-            std::cout << MAGENTA << "Program incheiat." << RESET << std::endl;
+            std::cout << RED << "Program incheiat." << RESET << std::endl;
             break;
         default:
             std::cout << RED << "Optiune invalida." << RESET << std::endl;

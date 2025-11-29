@@ -19,13 +19,13 @@ struct NFA {
 };
 
 bool isOperator(char c) {
-    return (c == '|' || c == '.' || c == '*' || c == '+' || c == '(' || c == ')');
+    return (c == '|' || c == '.' || c == '*' || c == '+' || c == '?' || c == '(' || c == ')');
 }
 
 int priority(char op) {
     if (op == '|') return 1;
     if (op == '.') return 2;
-    if (op == '*' || op == '+') return 3;
+    if (op == '*' || op == '+' || op == '?') return 3;
     return 0;
 }
 
@@ -41,7 +41,7 @@ std::string addConcatenation(std::string regex) {
             bool c1_is_operand = !isOperator(c1);
             bool c2_is_operand = !isOperator(c2);
 
-            bool c1_allows_dot_after = (c1_is_operand || c1 == '*' || c1 == '+' || c1 == ')');
+            bool c1_allows_dot_after = (c1_is_operand || c1 == '*' || c1 == '+' || c1 == '?' || c1 == ')');
             bool c2_allows_dot_before = (c2_is_operand || c2 == '(');
 
             if (c1_allows_dot_after && c2_allows_dot_before) {
@@ -72,8 +72,8 @@ std::string regexToPostfix(std::string regex) {
             if (!stack.empty()) stack.pop();
         }
         else {
-            while (!stack.empty() && stack.top() != '('
-                && priority(stack.top()) >= priority(c)) {
+            while (!stack.empty() && stack.top() != '(' &&
+                priority(stack.top()) >= priority(c)) {
                 postfix += stack.top();
                 stack.pop();
             }
@@ -170,7 +170,8 @@ DeterministicFiniteAutomaton RegexToDFA(std::string regex) {
 
             nfa_stack.push(C);
         }
-        else if (c == '*' || c == '+') {
+        else if (c == '*' || c == '+' || c == '?') {
+
             NFA A = nfa_stack.top(); nfa_stack.pop();
             NFA C;
             C.initial_state = state_counter++;
@@ -185,9 +186,11 @@ DeterministicFiniteAutomaton RegexToDFA(std::string regex) {
 
             C.lambda_transitions[C.initial_state].insert(A.initial_state);
             C.lambda_transitions[A.final_state].insert(C.final_state);
-            C.lambda_transitions[A.final_state].insert(A.initial_state);
 
-            if (c == '*') {
+            if (c == '*' || c == '+') {
+                C.lambda_transitions[A.final_state].insert(A.initial_state);
+            }
+            if (c == '*' || c == '?') {
                 C.lambda_transitions[C.initial_state].insert(C.final_state);
             }
 
@@ -248,7 +251,6 @@ DeterministicFiniteAutomaton RegexToDFA(std::string regex) {
 
     return dfa;
 }
-
 SyntaxNode* buildSyntaxTree(std::string postfix) {
     std::stack<SyntaxNode*> st;
 
@@ -258,14 +260,16 @@ SyntaxNode* buildSyntaxTree(std::string postfix) {
         }
         else {
             std::string displayValue = std::string(1, c);
+
             if (c == '|') displayValue = "(sau)";
-            if (c == '.') displayValue = "(.)"; 
-            if (c == '*') displayValue = "(*)"; 
-            if (c == '+') displayValue = "(+)";    
+            if (c == '.') displayValue = "(.)";
+            if (c == '*') displayValue = "(*)";
+            if (c == '+') displayValue = "(+)";
+            if (c == '?') displayValue = "(?)";
 
             SyntaxNode* node = new SyntaxNode(displayValue);
 
-            if (c == '*' || c == '+') {
+            if (c == '*' || c == '+' || c == '?') {
                 if (!st.empty()) {
                     node->left = st.top();
                     st.pop();
@@ -310,7 +314,7 @@ void printTreeRecursive(SyntaxNode* node, std::string prefix, bool isLast) {
 
 void printSyntaxTree(SyntaxNode* root) {
     if (!root) return;
-    std::cout << "\nArbore Sintactic (Structura):\n";
+    std::cout << "\nArbore Sintactic:\n";
     printTreeRecursive(root, "", true);
     std::cout << std::endl;
 }
