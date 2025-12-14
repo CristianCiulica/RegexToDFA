@@ -101,7 +101,7 @@ bool DeterministicFiniteAutomaton::VerificaCuvant(std::string cuvant) {
         current_state = delta[{current_state, c}];
         std::cout << " -> q" << current_state;
     }
-
+    // adaug o functie noua de UI
     std::cout << std::endl;
     bool accepted = (F.find(current_state) != F.end());
     if (accepted)
